@@ -236,6 +236,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 8px;
 }
+.card-foot { margin-top: 8px; }
 .issue-key {
   color: var(--accent-strong);
   text-decoration: none;
