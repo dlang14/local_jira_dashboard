@@ -66,10 +66,17 @@ Use the same account as `JIRA_EMAIL`. You can override the service name with `JI
 - **Sort within columns:** Recently updated (default), Recently assigned, Priority, Key, or Jira order. The choice is saved in `localStorage` (along with the assigned window and the recently-assigned toggle).
 - **Recently assigned to me:** a toggle plus a window (24 hours / 7 days / 30 days) that narrows the board to tickets assigned to you within that window. Live mode uses `assignee = currentUser() AND assignee CHANGED TO currentUser() AFTER -7d` (window substituted from a fixed allowlist).
 - **Card badges:** `updated 3h ago` (full timestamp on hover) and a green `new to me` badge for tickets assigned to you within the selected window (24 hours by default), with `assigned 5h ago` when the assignment time is known.
+- **Project colors:** every project gets a stable color from a fixed colorblind-friendly palette (Okabe-Ito and Paul Tol hues plus a slate). Cards get a colored left stripe and a colored project-key badge, and the project filter is a row of color chips that doubles as a legend. Light and dark themes follow `prefers-color-scheme`, and colors are tuned so stripes have at least 3:1 contrast against the card and badge text at least 4.5:1.
 - Cards show key (link to Jira), summary, project, type, priority, assignee, and status.
 - Manual refresh, plus auto-refresh every 3 minutes (paused while a drawer, picker, or drag is active).
 - Drag a card to another column to transition it. If several transitions map to that category, a picker is shown. Transitions that need a screen or required fields are not guessed; you get a clear message instead.
 - Click a card to edit summary, priority, or assignee, and to add comments. Updates are optimistic and roll back if Jira (or the demo store) rejects them.
+
+### Project colors
+
+- The color is picked from `fnv1a(PROJECT_KEY) % 10`, so the same key gets the same color on every machine. If two visible projects land on the same color, the later one (alphabetically) moves to the next free slot, so up to 10 projects get distinct colors. With more projects, colors are shared as evenly as possible. Because of this, a project's color can shift when the set of projects on your board changes.
+- Click a project's dot in the chip row to pick another color from the palette. Overrides are stored in your browser's `localStorage` (`localJiraBoard.projectColors.v1`) and never leave your machine. Use **Use default** in the picker, or **Reset colors**, to undo them.
+- Click a project's name in the chip row to filter the board to it; click it again (or **All**) to clear.
 
 ## API additions
 
@@ -126,8 +133,9 @@ lib/jira-client.mjs     Live Jira Cloud REST client
 lib/windows.mjs         Allowlist of assigned-window values (24h / 7d / 30d)
 lib/mock-store.mjs      In-memory demo data and writes
 lib/handlers.mjs        JSON API
-public/                 Vanilla HTML/CSS/JS UI (logic.js: relative time, sorting, prefs)
+public/                 Vanilla HTML/CSS/JS UI (logic.js: relative time, sorting, prefs, project colors)
 test/api.test.mjs       Mock-mode API and security tests
 test/logic.test.mjs     Relative time, sorting, and prefs tests
+test/colors.test.mjs    Project color hashing, collisions, overrides, and contrast tests
 test/jira-client.test.mjs  Live client tests against an injected fake fetch (no network)
 ```

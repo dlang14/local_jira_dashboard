@@ -1,6 +1,35 @@
-import { relativeTime, sortIssues, normalizePrefs } from "/logic.js";
+import {
+  PALETTE,
+  assignProjectColors,
+  normalizeColorOverrides,
+  normalizePrefs,
+  relativeTime,
+  resolveColor,
+  sortIssues,
+} from "/logic.js";
 
 const PREF_KEY = "localJiraBoard.prefs.v1";
+const COLOR_KEY = "localJiraBoard.projectColors.v1";
+
+function loadColorOverrides() {
+  try {
+    return normalizeColorOverrides(JSON.parse(localStorage.getItem(COLOR_KEY) || "{}"));
+  } catch {
+    return {};
+  }
+}
+
+function saveColorOverrides() {
+  try {
+    if (Object.keys(state.colorOverrides).length) {
+      localStorage.setItem(COLOR_KEY, JSON.stringify(state.colorOverrides));
+    } else {
+      localStorage.removeItem(COLOR_KEY);
+    }
+  } catch {
+    // Overrides just won't persist if localStorage is unavailable.
+  }
+}
 
 function loadPrefs() {
   try {
@@ -34,6 +63,8 @@ const state = {
   me: null,
   issues: [],
   includeDone: false,
+  colorOverrides: loadColorOverrides(),
+  colorMap: new Map(),
   ...(() => {
     const prefs = loadPrefs();
     return { sort: prefs.sort, assignedWindow: prefs.assignedWindow, recentOnly: prefs.recentOnly };
@@ -60,7 +91,13 @@ const els = {
   refresh: document.getElementById("refresh-btn"),
   board: document.getElementById("board"),
   search: document.getElementById("search"),
-  project: document.getElementById("filter-project"),
+  projectChips: document.getElementById("project-chips"),
+  resetColors: document.getElementById("reset-colors"),
+  colorPop: document.getElementById("color-pop"),
+  colorPopTitle: document.getElementById("color-pop-title"),
+  colorSwatches: document.getElementById("color-swatches"),
+  colorResetOne: document.getElementById("color-reset-one"),
+  colorPopClose: document.getElementById("color-pop-close"),
   role: document.getElementById("filter-role"),
   type: document.getElementById("filter-type"),
   priority: document.getElementById("filter-priority"),
@@ -206,8 +243,139 @@ function fillSelect(select, values, current, allLabel) {
   if ([...select.options].some((o) => o.value === keep)) select.value = keep;
 }
 
+function recomputeColors() {
+  const keys = state.issues.map((issue) => issue.project.key).filter(Boolean);
+  state.colorMap = assignProjectColors(keys, state.colorOverrides);
+}
+
+// Sets the per-scheme CSS variables on an element so styles.css can follow prefers-color-scheme.
+function paintProject(el, key) {
+  const index = state.colorMap.get(String(key).toUpperCase()) ?? 0;
+  paintIndex(el, index);
+  el.classList.add("proj");
+}
+
+function paintIndex(el, index) {
+  const light = resolveColor(index, "light");
+  const dark = resolveColor(index, "dark");
+  el.style.setProperty("--pc-light", light.stripe);
+  el.style.setProperty("--pc-light-text", light.text);
+  el.style.setProperty("--pc-dark", dark.stripe);
+  el.style.setProperty("--pc-dark-text", dark.text);
+}
+
+function projectInfo() {
+  const info = new Map();
+  for (const issue of state.issues) {
+    const key = issue.project.key;
+    if (!key) continue;
+    const entry = info.get(key) || { key, name: issue.project.name || key, count: 0 };
+    entry.count += 1;
+    info.set(key, entry);
+  }
+  return [...info.values()].sort((x, y) => x.key.localeCompare(y.key));
+}
+
+function renderProjectChips() {
+  const projects = projectInfo();
+  if (state.filters.project && !projects.some((p) => p.key === state.filters.project)) {
+    state.filters.project = "";
+  }
+  els.projectChips.innerHTML = "";
+  const all = document.createElement("span");
+  all.className = `pchip pchip-all${state.filters.project ? "" : " active"}`;
+  const allBtn = document.createElement("button");
+  allBtn.type = "button";
+  allBtn.textContent = "All";
+  allBtn.setAttribute("aria-pressed", String(!state.filters.project));
+  allBtn.addEventListener("click", () => setProjectFilter(""));
+  all.append(allBtn);
+  els.projectChips.append(all);
+
+  for (const project of projects) {
+    const chip = document.createElement("span");
+    chip.className = `pchip${state.filters.project === project.key ? " active" : ""}`;
+    paintProject(chip, project.key);
+
+    const dotBtn = document.createElement("button");
+    dotBtn.type = "button";
+    dotBtn.className = "dot-btn";
+    dotBtn.title = `Change the color for ${project.key}`;
+    dotBtn.setAttribute("aria-label", `Change color for project ${project.key}`);
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    dotBtn.append(dot);
+    dotBtn.addEventListener("click", (event) => openColorPop(project, dotBtn, event));
+
+    const label = document.createElement("button");
+    label.type = "button";
+    label.title = `${project.name} (${project.count} tickets). Click to filter.`;
+    label.setAttribute("aria-pressed", String(state.filters.project === project.key));
+    label.append(document.createTextNode(project.key));
+    const count = document.createElement("span");
+    count.className = "count-inline";
+    count.textContent = String(project.count);
+    label.append(count);
+    label.addEventListener("click", () => setProjectFilter(state.filters.project === project.key ? "" : project.key));
+
+    chip.append(dotBtn, label);
+    els.projectChips.append(chip);
+  }
+  els.resetColors.classList.toggle("hidden", Object.keys(state.colorOverrides).length === 0);
+}
+
+function setProjectFilter(key) {
+  state.filters.project = key;
+  renderProjectChips();
+  renderBoard();
+}
+
+let colorPopProject = null;
+
+function openColorPop(project, anchor, event) {
+  event?.stopPropagation();
+  colorPopProject = project.key;
+  els.colorPopTitle.textContent = `Color for ${project.key} · ${project.name}`;
+  els.colorSwatches.innerHTML = "";
+  const current = state.colorMap.get(project.key.toUpperCase());
+  PALETTE.forEach((entry, index) => {
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.className = "swatch proj";
+    paintIndex(swatch, index);
+    swatch.title = entry.name;
+    swatch.setAttribute("aria-label", entry.name);
+    swatch.setAttribute("aria-pressed", String(index === current));
+    swatch.addEventListener("click", () => {
+      state.colorOverrides[project.key.toUpperCase()] = index;
+      applyColorChange();
+    });
+    els.colorSwatches.append(swatch);
+  });
+  const rect = anchor.getBoundingClientRect();
+  els.colorPop.classList.remove("hidden");
+  const left = Math.min(Math.max(8, rect.left), window.innerWidth - els.colorPop.offsetWidth - 8);
+  els.colorPop.style.left = `${left}px`;
+  els.colorPop.style.top = `${rect.bottom + 8}px`;
+  els.colorSwatches.querySelector("button")?.focus();
+}
+
+function closeColorPop() {
+  colorPopProject = null;
+  els.colorPop.classList.add("hidden");
+}
+
+function applyColorChange() {
+  saveColorOverrides();
+  recomputeColors();
+  renderProjectChips();
+  renderBoard();
+  closeColorPop();
+}
+
 function refreshFilterOptions() {
-  fillSelect(els.project, unique(state.issues.map((i) => i.project.key)), state.filters.project, "All projects");
+  recomputeColors();
+  renderProjectChips();
   fillSelect(els.type, unique(state.issues.map((i) => i.issueType.name)), state.filters.type, "All types");
   fillSelect(els.priority, unique(state.issues.map((i) => i.priority.name)), state.filters.priority, "All priorities");
 }
@@ -218,6 +386,7 @@ function cardElement(issue) {
   card.draggable = true;
   card.dataset.key = issue.key;
   card.dataset.category = issue.status.category;
+  paintProject(card, issue.project.key);
 
   const top = document.createElement("div");
   top.className = "card-top";
@@ -257,11 +426,19 @@ function cardElement(issue) {
   mid.className = "card-top";
   const type = document.createElement("span");
   type.className = "chip";
-  type.textContent = `${issue.issueType.name} · ${issue.project.key}`;
+  type.textContent = issue.issueType.name;
+  const badge = document.createElement("span");
+  badge.className = "proj-badge";
+  badge.textContent = issue.project.key;
+  badge.title = issue.project.name || issue.project.key;
+  const left = document.createElement("span");
+  left.className = "card-left";
+  left.style.cssText = "display:inline-flex;align-items:center;gap:6px;min-width:0";
+  left.append(badge, type);
   const status = document.createElement("span");
   status.className = "chip";
   status.textContent = issue.status.name;
-  mid.append(type, status);
+  mid.append(left, status);
 
   const foot = document.createElement("div");
   foot.className = "card-foot";
@@ -359,7 +536,11 @@ function renderBoard() {
       const title = document.createElement("h2");
       title.className = "lane-title";
       const sample = issues.find((issue) => issue.project.key === key);
-      title.textContent = `${sample.project.name} (${key})`;
+      paintProject(title, key);
+      const laneBadge = document.createElement("span");
+      laneBadge.className = "proj-badge";
+      laneBadge.textContent = key;
+      title.append(laneBadge, document.createTextNode(sample.project.name || key));
       const grid = document.createElement("div");
       grid.className = "lane-grid";
       for (const category of CATEGORIES) {
@@ -656,7 +837,6 @@ els.editAssignee.addEventListener("input", () => {
 
 function syncFiltersFromUi() {
   state.filters.search = els.search.value;
-  state.filters.project = els.project.value;
   state.filters.role = els.role.value;
   state.filters.type = els.type.value;
   state.filters.priority = els.priority.value;
@@ -665,7 +845,18 @@ function syncFiltersFromUi() {
 }
 
 els.search.addEventListener("input", syncFiltersFromUi);
-els.project.addEventListener("change", syncFiltersFromUi);
+els.resetColors.addEventListener("click", () => {
+  state.colorOverrides = {};
+  applyColorChange();
+});
+els.colorResetOne.addEventListener("click", () => {
+  if (colorPopProject) delete state.colorOverrides[colorPopProject.toUpperCase()];
+  applyColorChange();
+});
+els.colorPopClose.addEventListener("click", closeColorPop);
+document.addEventListener("click", (event) => {
+  if (!els.colorPop.classList.contains("hidden") && !els.colorPop.contains(event.target)) closeColorPop();
+});
 els.role.addEventListener("change", syncFiltersFromUi);
 els.type.addEventListener("change", syncFiltersFromUi);
 els.priority.addEventListener("change", syncFiltersFromUi);
@@ -697,6 +888,7 @@ els.addComment.addEventListener("click", addComment);
 els.pickerCancel.addEventListener("click", closePicker);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    closeColorPop();
     closePicker();
     closeDrawer();
   }

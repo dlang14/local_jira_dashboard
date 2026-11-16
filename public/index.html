@@ -30,12 +30,6 @@
         <input type="search" id="search" placeholder="Search key, summary, or project" />
       </label>
       <label>
-        <span class="sr-only">Project</span>
-        <select id="filter-project">
-          <option value="">All projects</option>
-        </select>
-      </label>
-      <label>
         <span class="sr-only">Role</span>
         <select id="filter-role">
           <option value="both">Assigned or reported</option>
@@ -86,6 +80,21 @@
         <span>Swimlanes</span>
       </label>
     </section>
+
+    <section class="legend" aria-label="Projects">
+      <span class="legend-label">Projects</span>
+      <div id="project-chips" class="chips" role="group" aria-label="Filter by project"></div>
+      <button type="button" class="link-btn hidden" id="reset-colors">Reset colors</button>
+    </section>
+
+    <div id="color-pop" class="color-pop hidden" role="dialog" aria-label="Choose a project color">
+      <p class="color-pop-title" id="color-pop-title"></p>
+      <div id="color-swatches" class="swatches"></div>
+      <div class="color-pop-actions">
+        <button type="button" class="link-btn" id="color-reset-one">Use default</button>
+        <button type="button" class="link-btn" id="color-pop-close">Close</button>
+      </div>
+    </div>
 
     <main id="board" class="board" aria-live="polite"></main>
 
