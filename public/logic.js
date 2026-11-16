@@ -69,7 +69,7 @@ export const PALETTE = Object.freeze([
   Object.freeze({ id: "vermillion", name: "Vermillion", hex: "#D55E00" }),
   Object.freeze({ id: "purple", name: "Reddish purple", hex: "#CC79A7" }),
   Object.freeze({ id: "indigo", name: "Indigo", hex: "#332288" }),
-  Object.freeze({ id: "olive", name: "Olive", hex: "#999933" }),
+  Object.freeze({ id: "olive", name: "Dark olive", hex: "#5F6F14" }),
   Object.freeze({ id: "wine", name: "Wine", hex: "#882255" }),
 ]);
 
@@ -180,4 +180,71 @@ export function normalizeColorOverrides(raw, size = PALETTE.length) {
     }
   }
   return clean;
+}
+
+// ---------------------------------------------------------------------------
+// Theme (System / Light / Dark)
+// ---------------------------------------------------------------------------
+
+export const THEMES = Object.freeze(["system", "light", "dark"]);
+export const THEME_STORAGE_KEY = "localJiraBoard.theme.v1";
+
+// Anything that is not exactly "light" or "dark" means System.
+export function normalizeTheme(value) {
+  return value === "light" || value === "dark" ? value : "system";
+}
+
+// Reads the saved choice. Tolerates missing storage, throwing storage, and junk values.
+export function loadTheme(storage) {
+  try {
+    return normalizeTheme(storage?.getItem(THEME_STORAGE_KEY));
+  } catch {
+    return "system";
+  }
+}
+
+// Stores "light" or "dark"; System clears the key. Returns false if storage is unavailable.
+export function saveTheme(storage, theme) {
+  try {
+    const clean = normalizeTheme(theme);
+    if (clean === "system") storage.removeItem(THEME_STORAGE_KEY);
+    else storage.setItem(THEME_STORAGE_KEY, clean);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// styles.css keys everything off this attribute; "system" falls back to prefers-color-scheme.
+export function applyTheme(root, theme) {
+  const clean = normalizeTheme(theme);
+  root.setAttribute("data-theme", clean);
+  return clean;
+}
+
+// The theme a visitor actually sees, given the OS preference.
+export function effectiveTheme(theme, systemPrefersDark) {
+  const clean = normalizeTheme(theme);
+  if (clean === "system") return systemPrefersDark ? "dark" : "light";
+  return clean;
+}
+
+// Radiogroup keyboard handling: returns the theme to select for a key, or null if the key is not ours.
+export function themeForKey(current, key) {
+  const index = THEMES.indexOf(normalizeTheme(current));
+  const last = THEMES.length - 1;
+  switch (key) {
+    case "ArrowRight":
+    case "ArrowDown":
+      return THEMES[index === last ? 0 : index + 1];
+    case "ArrowLeft":
+    case "ArrowUp":
+      return THEMES[index === 0 ? last : index - 1];
+    case "Home":
+      return THEMES[0];
+    case "End":
+      return THEMES[last];
+    default:
+      return null;
+  }
 }

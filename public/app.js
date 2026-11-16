@@ -1,12 +1,68 @@
 import {
   PALETTE,
+  THEME_STORAGE_KEY,
+  applyTheme,
   assignProjectColors,
+  loadTheme,
   normalizeColorOverrides,
   normalizePrefs,
+  normalizeTheme,
   relativeTime,
   resolveColor,
+  saveTheme,
   sortIssues,
+  themeForKey,
 } from "/logic.js";
+
+// ---- Theme toggle (System / Light / Dark) ----
+// The inline script in index.html already set data-theme before first paint; this keeps the
+// radiogroup in sync, saves changes, and follows changes made in other tabs.
+function themeStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+const themeButtons = [...document.querySelectorAll("[data-theme-choice]")];
+
+function syncThemeButtons(theme) {
+  for (const button of themeButtons) {
+    const selected = button.dataset.themeChoice === theme;
+    button.setAttribute("aria-checked", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  }
+}
+
+function chooseTheme(theme, { persist = true } = {}) {
+  const clean = applyTheme(document.documentElement, theme);
+  if (persist) saveTheme(themeStorage(), clean);
+  syncThemeButtons(clean);
+  return clean;
+}
+
+function initThemeToggle() {
+  chooseTheme(loadTheme(themeStorage()), { persist: false });
+  for (const button of themeButtons) {
+    button.addEventListener("click", () => chooseTheme(button.dataset.themeChoice));
+  }
+  document.getElementById("theme-toggle")?.addEventListener("keydown", (event) => {
+    const current = normalizeTheme(document.documentElement.getAttribute("data-theme"));
+    const next = themeForKey(current, event.key);
+    if (!next) return;
+    event.preventDefault();
+    chooseTheme(next);
+    themeButtons.find((button) => button.dataset.themeChoice === next)?.focus();
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key === THEME_STORAGE_KEY || event.key === null) {
+      chooseTheme(loadTheme(themeStorage()), { persist: false });
+    }
+  });
+}
+
+initThemeToggle();
 
 const PREF_KEY = "localJiraBoard.prefs.v1";
 const COLOR_KEY = "localJiraBoard.projectColors.v1";

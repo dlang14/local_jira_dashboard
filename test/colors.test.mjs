@@ -131,3 +131,38 @@ test("normalizeColorOverrides keeps only valid entries", () => {
   assert.deepEqual(normalizeColorOverrides([1, 2]), {});
   assert.deepEqual(normalizeColorOverrides("x"), {});
 });
+
+// ---- Distinguishability (CIE76 delta E between the colors actually shown) ----
+function lab(hex) {
+  const lin = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  const [r, g, b] = [1, 3, 5].map((i) => lin(parseInt(hex.slice(i, i + 2), 16)));
+  const x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+  const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+  const f = (v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+  return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+}
+const deltaE = (a, b) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]));
+const shown = (id, scheme) => resolveColor(PALETTE.findIndex((c) => c.id === id), scheme).stripe;
+
+test("orange and dark olive stay clearly apart in both themes (hue and lightness)", () => {
+  assert.ok(PALETTE.some((c) => c.id === "olive"));
+  for (const [scheme, min] of [["light", 40], ["dark", 45]]) {
+    const gap = deltaE(shown("orange", scheme), shown("olive", scheme));
+    assert.ok(gap >= min, `${scheme}: orange vs olive delta E ${gap.toFixed(1)}`);
+  }
+  // Lightness differs too, which helps people with red-green color blindness.
+  assert.ok(lab(shown("orange", "light"))[0] - lab(shown("olive", "light"))[0] >= 12);
+});
+
+test("no two palette colors collapse together in either theme", () => {
+  for (const scheme of ["light", "dark"]) {
+    let min = Infinity;
+    for (let i = 0; i < PALETTE.length; i += 1) {
+      for (let j = i + 1; j < PALETTE.length; j += 1) {
+        min = Math.min(min, deltaE(shown(PALETTE[i].id, scheme), shown(PALETTE[j].id, scheme)));
+      }
+    }
+    assert.ok(min >= 12, `${scheme}: closest pair delta E ${min.toFixed(1)}`);
+  }
+});

@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="system">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Local Jira Board</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c2b3a'/%3E%3Crect x='5' y='7' width='6' height='18' rx='1.5' fill='%237aa2c8'/%3E%3Crect x='13' y='11' width='6' height='14' rx='1.5' fill='%23c9a46c'/%3E%3Crect x='21' y='15' width='6' height='10' rx='1.5' fill='%2367b58a'/%3E%3C/svg%3E" />
+    <script>
+      /* Runs before first paint so the saved theme never flashes. Keep in sync with
+         THEME_STORAGE_KEY / normalizeTheme in logic.js (test/theme.test.mjs runs this exact script). */
+      (function () {
+        var theme = "system";
+        try {
+          var saved = localStorage.getItem("localJiraBoard.theme.v1");
+          if (saved === "light" || saved === "dark") theme = saved;
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -18,6 +30,11 @@
       </div>
       <div class="top-actions">
         <span class="meta" id="last-updated">Not loaded yet</span>
+        <div class="theme-toggle" id="theme-toggle" role="radiogroup" aria-label="Color theme">
+          <button type="button" role="radio" aria-checked="true" tabindex="0" data-theme-choice="system" aria-label="Theme: System, follows your device setting">System</button>
+          <button type="button" role="radio" aria-checked="false" tabindex="-1" data-theme-choice="light" aria-label="Theme: Light">Light</button>
+          <button type="button" role="radio" aria-checked="false" tabindex="-1" data-theme-choice="dark" aria-label="Theme: Dark">Dark</button>
+        </div>
         <button type="button" class="btn" id="refresh-btn">Refresh</button>
       </div>
     </header>

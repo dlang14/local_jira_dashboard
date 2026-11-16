@@ -1,45 +1,50 @@
 :root {
-  --bg: #10151c;
-  --bg-elev: #171e27;
-  --bg-column: #141b23;
-  --bg-card: #1c242e;
-  --bg-card-hover: #222c38;
-  --line: #2b3644;
-  --text: #e8eef4;
-  --muted: #8b98a8;
-  --accent: #7aa2c8;
-  --accent-strong: #9cbcda;
-  --todo: #7aa2c8;
-  --progress: #c9a46c;
-  --done: #67b58a;
-  --danger: #d27a7a;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  color-scheme: light dark;
+  --bg: light-dark(#f3f5f9, #10151c);
+  --bg-elev: light-dark(#ffffff, #171e27);
+  --bg-column: light-dark(#eaeef4, #141b23);
+  --bg-card: light-dark(#ffffff, #1c242e);  /* keep --bg-card in sync with CARD_BG in logic.js */
+  --bg-card-hover: light-dark(#f5f8fc, #222c38);
+  --line: light-dark(#d0d8e3, #2b3644);
+  --text: light-dark(#1b2430, #e8eef4);
+  --muted: light-dark(#556275, #8b98a8);
+  --accent: light-dark(#2a6496, #7aa2c8);
+  --accent-strong: light-dark(#1d5a8c, #9cbcda);
+  --todo: light-dark(#2a6496, #7aa2c8);
+  --progress: light-dark(#8f6310, #c9a46c);
+  --done: light-dark(#1f7a4d, #67b58a);
+  --danger: light-dark(#b3402f, #d27a7a);
+  --shadow: 0 10px 30px light-dark(rgba(30, 45, 70, 0.14), rgba(0, 0, 0, 0.28));
+  --chip-bg: light-dark(#e4e9f0, #141b23);
+  --count-bg: light-dark(#dde3ec, #0f151c);
+  --drag-bg: light-dark(#e1ecf8, #182230);
+  --suggest-bg: light-dark(#ffffff, #10161d);
+  --toast-bg: light-dark(#ffffff, #1b2530);
+  --avatar-bg: light-dark(#cdd7e3, #314155);
+  --avatar-text: light-dark(#1b2430, #d7e4ef);
+  --primary-bg: light-dark(#2a6496, #2a4660);
+  --primary-border: light-dark(#1d5a8c, #3d6486);
+  --primary-text: light-dark(#ffffff, #e8eef4);
+  --banner-text: light-dark(#5a4310, #ead7b3);
+  --new-text: light-dark(#ffffff, #0f1a12);
+  --prio-high: light-dark(#b3402f, #e09a8e);
+  --prio-med: light-dark(#7f6008, #d6bf8a);
+  --prio-low: light-dark(#3d6786, #8ea8bd);
+  --glow: light-dark(rgba(42, 100, 150, 0.08), rgba(122, 162, 200, 0.09));
+  --scrim: light-dark(rgba(30, 40, 55, 0.35), rgba(5, 8, 12, 0.58));
+  --card-shadow-color: light-dark(rgba(30, 45, 70, 0.1), rgba(255, 255, 255, 0.03));
   --radius: 12px;
-  --chip-bg: #141b23;
-  --count-bg: #0f151c;
-  --drag-bg: #182230;
-  --suggest-bg: #10161d;
-  --toast-bg: #1b2530;
-  --avatar-bg: #314155;
-  --avatar-text: #d7e4ef;
-  --primary-bg: #2a4660;
-  --primary-border: #3d6486;
-  --primary-text: #e8eef4;
-  --banner-text: #ead7b3;
-  --new-text: #0f1a12;
-  --prio-high: #e09a8e;
-  --prio-med: #d6bf8a;
-  --prio-low: #8ea8bd;
-  color-scheme: dark;
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body {
   font-family: var(--font);
   background:
-    radial-gradient(1200px 500px at 10% -10%, rgba(122, 162, 200, 0.09), transparent 50%),
+    radial-gradient(1200px 500px at 10% -10%, var(--glow), transparent 50%),
     var(--bg);
   color: var(--text);
   letter-spacing: 0.01em;
@@ -221,7 +226,7 @@ input:focus, select:focus, textarea:focus {
   border-radius: 10px;
   padding: 10px 11px 9px;
   cursor: pointer;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02);
+  box-shadow: 0 1px 2px var(--card-shadow-color);
 }
 .card:hover { background: var(--bg-card-hover); }
 .card.dragging { opacity: 0.45; }
@@ -284,7 +289,7 @@ input:focus, select:focus, textarea:focus {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(5, 8, 12, 0.55);
+  background: var(--scrim);
   z-index: 20;
 }
 .drawer {
@@ -349,7 +354,7 @@ input:focus, select:focus, textarea:focus {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(5, 8, 12, 0.6);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -407,62 +412,13 @@ input:focus, select:focus, textarea:focus {
 .badges + .summary { margin-top: 6px; }
 .when { color: var(--muted); font-size: 11px; white-space: nowrap; }
 
-/* ---- Light theme ---- */
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f3f5f9;
-    --bg-elev: #ffffff;
-    --bg-column: #eaeef4;
-    --bg-card: #ffffff; /* keep in sync with CARD_BG.light in logic.js */
-    --bg-card-hover: #f5f8fc;
-    --line: #d0d8e3;
-    --text: #1b2430;
-    --muted: #556275;
-    --accent: #2a6496;
-    --accent-strong: #1d5a8c;
-    --todo: #2a6496;
-    --progress: #8f6310;
-    --done: #1f7a4d;
-    --danger: #b3402f;
-    --shadow: 0 10px 30px rgba(30, 45, 70, 0.14);
-    --chip-bg: #e4e9f0;
-    --count-bg: #dde3ec;
-    --drag-bg: #e1ecf8;
-    --suggest-bg: #ffffff;
-    --toast-bg: #ffffff;
-    --avatar-bg: #cdd7e3;
-    --avatar-text: #1b2430;
-    --primary-bg: #2a6496;
-    --primary-border: #1d5a8c;
-    --primary-text: #ffffff;
-    --banner-text: #5a4310;
-    --new-text: #ffffff;
-    --prio-high: #b3402f;
-    --prio-med: #7f6008;
-    --prio-low: #3d6786;
-    color-scheme: light;
-  }
-  body {
-    background:
-      radial-gradient(1200px 500px at 10% -10%, rgba(42, 100, 150, 0.08), transparent 50%),
-      var(--bg);
-  }
-  .backdrop, .modal { background: rgba(30, 40, 55, 0.35); }
-  .card { box-shadow: 0 1px 2px rgba(30, 45, 70, 0.08); }
-}
-
 /* ---- Project colors ----
    Elements get --pc-light/--pc-dark (+ matching text colors) from app.js; CSS picks the pair
-   for the active color scheme so it follows prefers-color-scheme live. */
+   for the active color scheme via light-dark(), which follows data-theme (and, for System,
+   prefers-color-scheme live). */
 .proj {
-  --pc: var(--pc-dark, var(--accent));
-  --pc-text: var(--pc-dark-text, #000);
-}
-@media (prefers-color-scheme: light) {
-  .proj {
-    --pc: var(--pc-light, var(--accent));
-    --pc-text: var(--pc-light-text, #fff);
-  }
+  --pc: light-dark(var(--pc-light, #2a6496), var(--pc-dark, #7aa2c8));
+  --pc-text: light-dark(var(--pc-light-text, #fff), var(--pc-dark-text, #000));
 }
 .card.proj { border-left: 4px solid var(--pc); padding-left: 9px; }
 .proj-badge {
@@ -559,3 +515,31 @@ input:focus, select:focus, textarea:focus {
 }
 .swatch[aria-pressed="true"] { border-color: var(--text); }
 .color-pop-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+
+/* ---- Theme toggle and focus ---- */
+:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.theme-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-elev);
+}
+.theme-toggle button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+.theme-toggle button + button { border-left: 1px solid var(--line); }
+.theme-toggle button:hover { background: var(--bg-card-hover); color: var(--text); }
+.theme-toggle button[aria-checked="true"] {
+  background: var(--primary-bg);
+  color: var(--primary-text);
+}
+.theme-toggle button:focus-visible { outline-offset: -3px; }
+/* The selected segment is filled with the accent color, so its ring uses the text-on-accent color. */
+.theme-toggle button[aria-checked="true"]:focus-visible { outline-color: var(--primary-text); }
